@@ -2,6 +2,7 @@ package main
 
 import (
 	"cmp"
+	"container/heap"
 	"fmt"
 	"slices"
 	"sync"
@@ -449,9 +450,79 @@ func MergeIntervals(intervals [][]int) [][]int {
 	return result
 }
 
+// Soal 8 — Design Simple In-Memory Job Queue with Priority
+// Kali ini gabungan konsep: struct data + sedikit ordering logic, level masih junior/entry tapi lebih ke arah "sistem kecil" daripada algoritma murni.
+
+// Kamu diminta membuat komponen antrian job sederhana, di mana setiap job punya prioritas (angka lebih kecil = lebih prioritas / harus diproses lebih dulu). Ketika job diambil untuk diproses, job dengan prioritas tertinggi (angka terkecil) yang harus keluar duluan.
+
+// type Job struct {
+//     ID       string
+//     Priority int
+// }
+
+// type JobQueue struct {
+//     // isi sendiri
+// }
+
+// func NewJobQueue() *JobQueue
+// func (q *JobQueue) Push(job Job)
+// func (q *JobQueue) Pop() (Job, bool)  // ambil & hapus job dengan priority tertinggi (angka terkecil), bool = false kalau queue kosong
+
+type Job struct {
+	ID       string
+	Priority int
+}
+
+type JobHeap []*Job
+
+func (h JobHeap) Len() int           { return len(h) }
+func (h JobHeap) Less(i, j int) bool { return h[i].Priority < h[j].Priority }
+func (h JobHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+
+func (h *JobHeap) Push(x any) {
+	*h = append(*h, x.(*Job))
+}
+
+func (h *JobHeap) Pop() any {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
+
+type JobQueue struct {
+	mu sync.Mutex
+	jh *JobHeap
+}
+
+func NewJobQueue() *JobQueue {
+	jq := &JobQueue{
+		jh: &JobHeap{},
+	}
+	heap.Init(jq.jh)
+	return jq
+}
+
+func (q *JobQueue) Push(job Job) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	heap.Push(q.jh, &job)
+}
+
+func (q *JobQueue) Pop() (Job, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
+	if q.jh.Len() == 0 {
+		return Job{}, false
+	}
+
+	res := heap.Pop(q.jh)
+	job := res.(*Job)
+	return *job, true
+}
+
 func main() {
-	input := [][]int{{1, 3}, {2, 6}, {8, 10}}
-	output := MergeIntervals(input)
-	fmt.Println(input) // <- coba tebak, isinya apa SETELAH function ini selesai jalan?
-	fmt.Println(output)
+
 }
