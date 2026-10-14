@@ -74,7 +74,15 @@ func ProcessAll(inputs []int, numWorkers int, fn func(int) (int, error)) []Resul
 		go func() {
 			defer wg.Done()
 			for jobs := range ch {
-				res, err := fn(jobs.value)
+				res, err := func() (r int, e error) {
+					defer func() {
+						if p := recover(); p != nil {
+							e = fmt.Errorf("panic: %v", p)
+						}
+					}()
+					return fn(jobs.value)
+				}()
+
 				result[jobs.index] = Result{
 					Value: res,
 					Err:   err,
@@ -82,21 +90,20 @@ func ProcessAll(inputs []int, numWorkers int, fn func(int) (int, error)) []Resul
 			}
 		}()
 	}
-
 	wg.Wait()
 
 	return result
 }
 
 func TestProcessAll(t *testing.T) {
-	inputs := []int{1,2,3,4}
+	inputs := []int{1, 2, 3, 4}
 	fn := func(x int) (int, error) {
-		if x%2 == 0 {
-			return 0, fmt.Errorf("angka genap: %d", x)
+		if x == 3 {
+			panic("input tidak valid")
 		}
 		return x * 10, nil
 	}
 
-	res := ProcessAll(inputs, -1, fn)
+	res := ProcessAll(inputs, 2, fn)
 	fmt.Println(res)
 }
