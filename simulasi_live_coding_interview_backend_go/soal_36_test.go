@@ -72,6 +72,9 @@ func FirstSuccess(ctx context.Context, sources []func(ctx context.Context) (stri
 			}
 			errSlice = append(errSlice, res.Err)
 			if len(errSlice) == len(sources) {
+				if err := ctx.Err(); err != nil {
+					return "", err
+				}
 				return "", errors.Join(errSlice...)
 			}
 		}
